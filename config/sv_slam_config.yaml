@@ -1,0 +1,68 @@
+%YAML:1.0
+
+#common parameters
+imu_topic: "/camera/imu"
+image_topic: "/decompressed_img"
+depth_topic: "/decompressed_depth_img"
+output_path: "/home/chrisliu/ROSws_nuc/AtalsSLAM_ws/src/vins-rgbd-atlas/output"
+
+segmentor_config:
+  show_img: 1
+  config_path: "/home/chrisliu/ROSws/SV-SLAM_ws/src/SV-SLAM/lib/mmsegmentation/configs/bisenetv1/bisenetv1_r18-d32_4x4_1024x1024_160k_cityscapes.py"
+  checkpoint_path: "/home/chrisliu/ROSws/SV-SLAM_ws/src/SV-SLAM/lib/mmsegmentation/checkpoints/bisenetv1_r18-d32_4x4_1024x1024_160k_cityscapes_20210922_172239-c55e78e2.pth"
+  device: "cuda:0"
+
+image_config:
+  enable_segmentor: 0
+  cam_number: 2
+
+  cam0:
+    #camera calibration
+    image_width: 1242
+    image_height: 375
+
+    rotation_rect_matrix: !!opencv-matrix
+      rows: 4
+      cols: 4
+      dt: d
+      data: [ 9.998817e-01,1.511453e-02,-2.841595e-03,0,-1.511724e-02,9.998853e-01,-9.338510e-04,0,2.827154e-03,9.766976e-04,9.999955e-01,0,0,0,0,1]
+
+    projection_matrix: !!opencv-matrix
+      rows: 3
+      cols: 4
+      dt: d
+      data: [ 7.215377e+02,0.000000e+00,6.095593e+02,4.485728e+01,0.000000e+00,7.215377e+02,1.728540e+02,2.163791e-01,0.000000e+00,0.000000e+00,1.000000e+00,2.745884e-03 ]
+
+  cam1:
+    #camera calibration
+    image_width: 1242
+    image_height: 375
+
+    rotation_rect_matrix: !!opencv-matrix
+      rows: 4
+      cols: 4
+      dt: d
+      data: [9.998321e-01,-7.193136e-03,1.685599e-02,0,7.232804e-03,9.999712e-01,-2.293585e-03,0,-1.683901e-02,2.415116e-03,9.998553e-01,0,0,0,0,1]
+
+    projection_matrix: !!opencv-matrix
+      rows: 3
+      cols: 4
+      dt: d
+      data: [ 7.215377e+02,0.000000e+00,6.095593e+02,-3.395242e+02,0.000000e+00,7.215377e+02,1.728540e+02,2.199936e+00,0.000000e+00,0.000000e+00,1.000000e+00,2.729905e-03 ]
+
+sensor_config:
+  Tr_lidar2cam: !!opencv-matrix
+    rows: 4
+    cols: 4
+    dt: d
+    data: [ 7.533745e-03,-9.999714e-01,-6.166020e-04,-4.069766e-03,
+              1.480249e-02,7.280733e-04,-9.998902e-01,-7.631618e-02,
+              9.998621e-01,7.523790e-03,1.480755e-02,-2.717806e-01,
+              0,0,0,1 ]
+
+
+
+#暂时仅考虑动物
+dynamic_label: [ "person", "bird", "cat", "dog", "horse",
+                   "sheep", "cow", "elephant", "bear", "zebra",
+                   "giraffe" ]
