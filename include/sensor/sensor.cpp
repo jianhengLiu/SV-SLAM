@@ -2,7 +2,7 @@
  * @Author: Jianheng Liu
  * @Date: 2021-10-24 16:46:18
  * @LastEditors: Jianheng Liu
- * @LastEditTime: 2021-11-17 23:46:51
+ * @LastEditTime: 2021-12-03 11:29:00
  * @Description: Description
  */
 #include "sensor.h"
@@ -17,24 +17,26 @@
 
 using namespace std;
 
-Sensor::Sensor(const std::string &sensor_config_file)
-{
+Sensor::Sensor(const std::string &sensor_config_file) {
+
   readParameters(sensor_config_file);
 
-  gps = std::make_shared<GPS>();
-  img = std::make_shared<Image>(sensor_config_file);
-  lidar = std::make_shared<Lidar>();
+  // gps = std::make_shared<GPS>();
+  // lidar = std::make_shared<Lidar>();
+  for (int i = 0; i < CAM_NUM; ++i) {
+    camera.emplace_back(i, sensor_config_file);
+  }
 
-  sensor_thread_ = std::thread(&Sensor::sensorProcess, this);
+  // sensor_thread_ = std::thread(&Sensor::sensorProcess, this);
 }
 
-void Sensor::readParameters(const std::string &sensor_config_file)
-{
+void Sensor::readParameters(const std::string &sensor_config_file) {
   cv::FileStorage fsSettings(sensor_config_file, cv::FileStorage::READ);
-  if (!fsSettings.isOpened())
-  {
+  if (!fsSettings.isOpened()) {
     std::cerr << "ERROR: Wrong path to settings" << std::endl;
   }
+
+  CAM_NUM = static_cast<int>(fsSettings["cam_number"]);
 
   cv::FileNode fn = fsSettings["sensor_config"];
   cv::Mat cv_Tr_lidar2cam;
@@ -46,10 +48,8 @@ void Sensor::readParameters(const std::string &sensor_config_file)
   fsSettings.release();
 }
 
-void Sensor::sensorProcess()
-{
-  while (1)
-  {
+void Sensor::sensorProcess() {
+  while (1) {
     sensor_msgs::PointCloud2ConstPtr lidar_msg = lidar->getpopLidarMsg();
     pcl::PointCloud<pcl::PointXYZ> cloud_in;
     pcl::fromROSMsg(*lidar_msg, cloud_in);
@@ -58,57 +58,70 @@ void Sensor::sensorProcess()
     // pcl::removeNaNFromPointCloud(cloud_in, cloud_in, indices);
     // lidar->removeClosePointCloud(cloud_in, cloud_in, 0.1);
 
-    alignLidar2Img(cloud_in, cloud_in);
+    cout << "lidar_msg->header.stamp.toSec()" << endl
+         << to_string(lidar_msg->header.stamp.toSec()) << endl;
+
+    sensor_msgs::ImageConstPtr cam_msg = NULL;
+    while (1) {
+      cam_msg = camera[0].getpopCamMsg();
+      if (cam_msg->header.stamp.toSec() >= lidar_msg->header.stamp.toSec()) {
+        break;
+      }
+    }
+    cout << "cam0_msg->header.stamp.toSec()" << endl
+         << to_string(cam_msg->header.stamp.toSec()) << endl;
+
+    cv_bridge::CvImagePtr cv_ptr;
+    cv_ptr = cv_bridge::toCvCopy(cam_msg, sensor_msgs::image_encodings::BGR8);
+    cv::Mat color_img = cv_ptr->image;
+//    cv::Mat undistort_img;
+//    cv::undistort(color_img,undistort_img,camera[0].cam_param_.intrinsic_matrix,
+//                  camera[0].cam_param_.distortion_coeffs);
+
+    color_img =camera[0].undistort(color_img);
+
+    alignLidar2Img(cloud_in, color_img);
 
     std::chrono::milliseconds dura(10);
     std::this_thread::sleep_for(dura);
   }
 }
 
-void Sensor::alignLidar2Img(const pcl::PointCloud<pcl::PointXYZ> &cloud_in,
-                            pcl::PointCloud<pcl::PointXYZ> &cloud_out)
-{
-  cv::Mat depth_img = transformLidar2CamFrame(cloud_in, cloud_out);
-  cv::imshow("depth_img", depth_img);
-  cv::waitKey(1);
-}
+/*
+ * KITTI version
+ * */
+void Sensor::alignLidar2Img(const pcl::PointCloud<pcl::PointXYZ> &_cloud_in,
+                            cv::Mat _image_in) {
+  pcl::PointCloud<pcl::PointXYZ> cloud_cam;
+  cloud_cam.header = _cloud_in.header;
+  cloud_cam.points.resize(_cloud_in.points.size());
 
-cv::Mat Sensor::transformLidar2CamFrame(
-    const pcl::PointCloud<pcl::PointXYZ> &cloud_lidar,
-    pcl::PointCloud<pcl::PointXYZ> &cloud_cam)
-{
-  if (&cloud_lidar != &cloud_cam)
-  {
-    cloud_cam.header = cloud_lidar.header;
-    cloud_cam.points.resize(cloud_lidar.points.size());
-  }
-
-  Eigen::Matrix<double, 3, 4> Pr_lidar2cam0 = img->cam_param_[0].Proj * img->cam_param_[0].R_rect * sensor_param_.Tr_lidar2cam;
+  Eigen::Matrix<double, 3, 4> Pr_lidar2cam0 = camera[0].cam_param_.Proj *
+                                              camera[0].cam_param_.R_rect *
+                                              sensor_param_.Tr_lidar2cam;
 
   size_t j = 0;
-  // cv::Mat depth_img(img->cam_param_[0].height, img->cam_param_[0].width, CV_16UC1, cv::Scalar(0));
-  cv::Mat depth_img(img->cam_param_[0].height, img->cam_param_[0].width, CV_8UC1, cv::Scalar(0));
+  // cv::Mat depth_img(img->cam_param_[0].height, img->cam_param_[0].width,
+  // CV_16UC1, cv::Scalar(0));
+  //  cv::Mat depth_img(camera[0].cam_param_.height, camera[0].cam_param_.width,
+  //                    CV_8UC1, cv::Scalar(0));
 
-  sensor_msgs::ImageConstPtr cam0_msg = img->getpopCam0Msg();
-
-  cv_bridge::CvImagePtr cv_ptr;
-  cv_ptr = cv_bridge::toCvCopy(cam0_msg, sensor_msgs::image_encodings::BGR8);
-  cv::Mat color_img = cv_ptr->image;
-
-  for (auto point : cloud_lidar.points)
-  {
+  for (auto point : _cloud_in.points) {
     Eigen::Vector4d point_lidar(point.x, point.y, point.z, 1);
     Eigen::Vector3d point_cam = Pr_lidar2cam0 * point_lidar;
 
-    cv::Point2i point_uv(int(point_cam.x() / point_cam.z() + 0.5), int(point_cam.y() / point_cam.z() + 0.5));
-    // Eigen::Vector2i point_uv(int(point_cam.x() / point_cam.z() + 0.5), int(point_cam.y() / point_cam.z() + 0.5));
-    // Eigen::Vector2d point_uv(point_cam.x() / point_cam.z(), point_cam.y() / point_cam.z());
-    if (point_uv.x >= 0 && point_uv.y >= 0 && point_uv.x < img->cam_param_[0].width && point_uv.y < img->cam_param_[0].height && point_cam.z() > 0)
-    {
+    cv::Point2i point_uv(int(point_cam.x() / point_cam.z() + 0.5),
+                         int(point_cam.y() / point_cam.z() + 0.5));
+    // Eigen::Vector2i point_uv(int(point_cam.x() / point_cam.z() + 0.5),
+    // int(point_cam.y() / point_cam.z() + 0.5)); Eigen::Vector2d
+    // point_uv(point_cam.x() / point_cam.z(), point_cam.y() / point_cam.z());
+    if (point_uv.x >= 0 && point_uv.y >= 0 &&
+        point_uv.x < camera[0].cam_param_.width &&
+        point_uv.y < camera[0].cam_param_.height && point_cam.z() > 0) {
       // depth_img.at<unsigned char>(point_uv) = point_cam.z() * 1000;
       // depth_img.at<uchar>(point_uv) = 255 * point_cam.z() / 10;
       int depth = 255 * point_cam.z() / 30;
-      cv::circle(color_img, point_uv, 1, cv::Scalar(depth, 255 - depth, depth));
+      cv::circle(_image_in, point_uv, 1, cv::Scalar(depth, 255 - depth, depth));
 
       cloud_cam.points[j].x = point_cam.x();
       cloud_cam.points[j].y = point_cam.y();
@@ -116,8 +129,7 @@ cv::Mat Sensor::transformLidar2CamFrame(
       j++;
     }
   }
-  if (j != cloud_cam.points.size())
-  {
+  if (j != cloud_cam.points.size()) {
     cloud_cam.points.resize(j);
   }
 
@@ -125,5 +137,13 @@ cv::Mat Sensor::transformLidar2CamFrame(
   cloud_cam.width = static_cast<uint32_t>(j);
   cloud_cam.is_dense = true;
 
-  return color_img;
+  cv::imshow("_image_in", _image_in);
+  cv::waitKey(1);
+}
+
+cv::Mat Sensor::transformLidar2CamFrame(
+    const pcl::PointCloud<pcl::PointXYZ> &cloud_lidar,
+    pcl::PointCloud<pcl::PointXYZ> &cloud_cam) {
+
+  //  return color_img;
 }

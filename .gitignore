@@ -5,4 +5,7 @@
 **/__pycache__
 **/.vscode
 
+**.pt
+**.onnx
+
 !.gitignore

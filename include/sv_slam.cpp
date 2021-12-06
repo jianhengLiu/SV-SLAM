@@ -2,7 +2,7 @@
  * @Author: Jianheng Liu
  * @Date: 2021-10-24 17:32:22
  * @LastEditors: Jianheng Liu
- * @LastEditTime: 2021-11-17 20:41:19
+ * @LastEditTime: 2021-12-05 17:04:41
  * @Description: Description
  */
 
@@ -10,40 +10,65 @@
 
 using namespace std;
 
-void SV_SLAM::RegisterSubscriber(ros::NodeHandle &nh)
+SV_SLAM::SV_SLAM(ros::NodeHandle &nh)
 {
-    lidar_sub_ = nh.subscribe("/kitti/velo/pointcloud", 100, &SV_SLAM::lidar_callback, this);
-    // gps_pos_sub_ = nh.subscribe("/kitti/oxts/gps/fix", 100, &SV_SLAM::gps_pos_callback, this);
-    // gps_vel_sub_ = nh.subscribe("/kitti/oxts/gps/vel", 100, &SV_SLAM::gps_vel_callback, this);
-    img_left_sub_ = nh.subscribe("/kitti/camera_color_left/image_raw", 100, &SV_SLAM::img_left_callback, this);
-    // img_right_sub_ = nh.subscribe("/kitti/camera_color_right/image_raw", 100, &SV_SLAM::img_right_callback, this);
+  std::string sensor_config_file = "/home/chrisliu/ROSws/SV-SLAM_ws/src/SV-SLAM/config/sv_slam_config.yaml";
+  // std::string sensor_config_file;
+  // nh.getParam("sensor_config_file", sensor_config_file);
+
+  readParameters(sensor_config_file);
+  sensor = std::make_shared<Sensor>(sensor_config_file);
+  map = std::make_shared<Map>(nh, sensor_config_file);
+
+  // RegisterSubscriber(nh);
+  // RegisterPublisher(nh);
 }
 
-void SV_SLAM::RegisterPublisher(ros::NodeHandle &nh)
+void SV_SLAM::readParameters(const std::string &sensor_config_file)
 {
+  cv::FileStorage fsSettings(sensor_config_file, cv::FileStorage::READ);
+  if (!fsSettings.isOpened())
+  {
+    std::cerr << "ERROR: Wrong path to settings" << std::endl;
+  }
+  fsSettings["lidar_topic"] >> LIDAR_TOPIC;
+
+  fsSettings.release();
 }
+
+void SV_SLAM::RegisterSubscriber(ros::NodeHandle &nh)
+{
+  lidar_sub_ = nh.subscribe(LIDAR_TOPIC, 100, &SV_SLAM::lidar_callback, this);
+  // gps_pos_sub_ = nh.subscribe("/kitti/oxts/gps/fix", 100,
+  // &SV_SLAM::gps_pos_callback, this); gps_vel_sub_ =
+  // nh.subscribe("/kitti/oxts/gps/vel", 100, &SV_SLAM::gps_vel_callback, this);
+  for (int i = 0; i < sensor->camera.size(); ++i)
+    img_sub_.emplace_back(nh.subscribe<sensor_msgs::Image>(
+        sensor->camera[i].IMAGE_TOPIC, 100,
+        boost::bind(&SV_SLAM::img_callback, this, _1, i)));
+}
+
+void SV_SLAM::RegisterPublisher(ros::NodeHandle &nh) {}
 
 void SV_SLAM::lidar_callback(const sensor_msgs::PointCloud2ConstPtr &pcl_msg)
 {
-    sensor->lidar->input(pcl_msg);
+  sensor->lidar->input(pcl_msg);
 }
 
-void SV_SLAM::gps_pos_callback(const sensor_msgs::NavSatFixConstPtr &gps_pos_msg)
+void SV_SLAM::gps_pos_callback(
+    const sensor_msgs::NavSatFixConstPtr &gps_pos_msg)
 {
-    sensor->gps->input_pos(gps_pos_msg);
+  sensor->gps->input_pos(gps_pos_msg);
 }
 
-void SV_SLAM::gps_vel_callback(const geometry_msgs::TwistStampedConstPtr &gps_vel_msg)
+void SV_SLAM::gps_vel_callback(
+    const geometry_msgs::TwistStampedConstPtr &gps_vel_msg)
 {
-    sensor->gps->input_vel(gps_vel_msg);
+  sensor->gps->input_vel(gps_vel_msg);
 }
 
-void SV_SLAM::img_left_callback(const sensor_msgs::ImageConstPtr &img_left_msg)
+void SV_SLAM::img_callback(const sensor_msgs::ImageConstPtr &_img_msg,
+                           const int _cam_id)
 {
-    sensor->img->input_left(img_left_msg);
-}
-
-void SV_SLAM::img_right_callback(const sensor_msgs::ImageConstPtr &img_right_msg)
-{
-    sensor->img->input_right(img_right_msg);
+  sensor->camera[_cam_id].input_img(_img_msg);
 }

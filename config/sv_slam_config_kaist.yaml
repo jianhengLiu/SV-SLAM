@@ -22,25 +22,30 @@ sensor_config:
 cam_number: 1
 
 cam_config_0:
-  image_topic: "/kitti/camera_color_left/image_raw"
-  enable_segmentor: 0
+  image_topic: "/camera_array/cam0/image_raw"
+  enable_segmentor: 1
 
   #camera calibration
-  image_width: 1242
-  image_height: 375
+  image_width: 2048
+  image_height: 1536
 
   rotation_rect_matrix: !!opencv-matrix
     rows: 4
     cols: 4
     dt: d
-    data: [9.998817e-01,1.511453e-02,-2.841595e-03,0,-1.511724e-02,9.998853e-01,-9.338510e-04,0,2.827154e-03,9.766976e-04,9.999955e-01,0,0,0,0,1]
+    data: [1,0,0,0,
+           0,1,0,0,
+           0,0,1,0,
+           0,0,0,1]
 
   # P = K[R|t]
   projection_matrix: !!opencv-matrix
     rows: 3
     cols: 4
     dt: d
-    data: [7.215377e+02,0.000000e+00,6.095593e+02,4.485728e+01,0.000000e+00,7.215377e+02,1.728540e+02,2.163791e-01,0.000000e+00,0.000000e+00,1.000000e+00,2.745884e-03]
+    data: [1857.4752797615988, 0., 1039.692658811044,0.0,
+           0., 1869.2155909761746, 739.3362262994145,0.0,
+           0.0,0.0,1.0,0.0]
 
   intrinsic_matrix: !!opencv-matrix
     rows: 3

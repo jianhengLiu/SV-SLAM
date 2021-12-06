@@ -4,12 +4,12 @@
 Author: Jianheng Liu
 Date: 2021-10-23 23:05:43
 LastEditors: Jianheng Liu
-LastEditTime: 2021-11-02 19:32:43
+LastEditTime: 2021-12-03 20:10:14
 Description: MMSegmentor
 '''
-
-# Check Pytorch installation
-
+import sys
+print('sys: ', sys.executable)
+print('sys: ', sys.path)
 from mmseg.apis import inference_segmentor, init_segmentor
 
 from mmcv.ops import get_compiling_cuda_version, get_compiler_version
@@ -37,6 +37,9 @@ class Segmentor:
         # Device used for inference
         self.device = device
 
+        print('config_path:',self.config_path)
+        print('checkpoint_path:',self.checkpoint_path)
+        print('device:',self.device)
         # build the model from a config file and a checkpoint file
         self.model = init_segmentor(
             self.config_path, self.checkpoint_path, device=self.device)
@@ -44,6 +47,8 @@ class Segmentor:
         if self.model is not None:  
             print('Segmentor is Initialized!')
 
+
     def infer(self, data):
         if data is not None:
             return inference_segmentor(self.model, data)
+

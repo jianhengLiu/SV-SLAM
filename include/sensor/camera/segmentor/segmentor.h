@@ -2,7 +2,7 @@
  * @Author: Jianheng Liu
  * @Date: 2021-10-31 23:10:22
  * @LastEditors: Jianheng Liu
- * @LastEditTime: 2021-11-02 19:43:14
+ * @LastEditTime: 2021-12-05 12:30:47
  * @Description: Description
  */
 #pragma once
@@ -10,6 +10,7 @@
 #include <opencv2/opencv.hpp>
 
 #include <sensor_msgs/Image.h>
+
 
 class Segmentor
 {
@@ -21,6 +22,8 @@ public:
 private:
     std::string CONFIG_PATH, CHECKPOINT_PATH, DEVICE;
     bool SHOW_IMG;
+
+    cv::dnn::Net net;
 
     void readParameters(const std::string &sensor_config_file);
 };
