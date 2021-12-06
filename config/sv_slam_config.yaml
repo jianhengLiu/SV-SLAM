@@ -23,7 +23,7 @@ cam_number: 1
 
 cam_config_0:
   image_topic: "/kitti/camera_color_left/image_raw"
-  enable_segmentor: 0
+  enable_segmentor: 1
 
   #camera calibration
   image_width: 1242
@@ -58,6 +58,9 @@ cam_config_0:
 
 segmentor_config:
   show_img: 1
+
+  torch_script_path: "/home/chrisliu/ROSws/SV-SLAM_ws/src/SV-SLAM/models/bisenetv1_city.pt"
+
   config_path: "/home/chrisliu/ROSws/SV-SLAM_ws/src/SV-SLAM/lib/mmsegmentation/configs/bisenetv1/bisenetv1_r18-d32_4x4_1024x1024_160k_cityscapes.py"
   checkpoint_path: "/home/chrisliu/ROSws/SV-SLAM_ws/src/SV-SLAM/lib/mmsegmentation/checkpoints/bisenetv1_r18-d32_4x4_1024x1024_160k_cityscapes_20210922_172239-c55e78e2.pth"
   device: "cuda:0"

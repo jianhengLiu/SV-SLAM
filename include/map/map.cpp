@@ -2,7 +2,7 @@
  * @Author: Jianheng Liu
  * @Date: 2021-10-24 16:46:18
  * @LastEditors: Jianheng Liu
- * @LastEditTime: 2021-12-06 09:46:51
+ * @LastEditTime: 2021-12-06 14:53:30
  * @Description: Description
  */
 #include "map.h"
@@ -25,6 +25,38 @@
 
 using namespace std;
 
+struct Label
+{
+  /* data */
+  std::string name;
+  std::string category;
+  cv::Scalar color;
+};
+map<int, Label> labels = {
+    // https://github.com/mcordts/cityscapesScripts/blob/master/cityscapesscripts/helpers/labels.py
+    //trainId   name    category   color
+    {255, {"void", "void", {0, 0, 0}}},
+    {0, {"road", "flat", {128, 64, 128}}},
+    {1, {"sidewalk", "flat", {232, 35, 244}}},
+    {2, {"building", "construction", {70, 70, 70}}},
+    {3, {"wall", "construction", {156, 102, 102}}},
+    {4, {"fence", "construction", {153, 153, 190}}},
+    {5, {"pole", "object", {153, 153, 153}}},
+    {6, {"traffic light", "object", {30, 170, 250}}},
+    {7, {"traffic sign", "object", {0, 220, 220}}},
+    {8, {"vegetation", "nature", {35, 142, 107}}},
+    {9, {"terrain", "nature", {152, 251, 152}}},
+    {10, {"sky", "sky", {180, 130, 70}}},
+    {11, {"person", "human", {60, 20, 220}}},
+    {12, {"rider", "human", {0, 0, 255}}},
+    {13, {"car", "vehicle", {142, 0, 0}}},
+    {14, {"truck", "vehicle", {70, 0, 0}}},
+    {15, {"bus", "vehicle", {100, 60, 0}}},
+    {16, {"train", "vehicle", {100, 80, 0}}},
+    {17, {"motorcycle", "vehicle", {230, 0, 0}}},
+    {18, {"bicycle", "vehicle", {32, 11, 119}}},
+    {-1, {"license plate", "vehicle", {142, 0, 0}}}};
+
 Map::Map(ros::NodeHandle &nh, const std::string &sensor_config_file)
 {
   node_ = nh;
@@ -33,8 +65,8 @@ Map::Map(ros::NodeHandle &nh, const std::string &sensor_config_file)
 
   readParameters(sensor_config_file);
 
-  // constructSemanticLineMapfromColmap();
-  pubLineMapfromTXT("/home/chrisliu/Datasets/kitti/2011_09_26_drive_0101_sync/2011_09_26/2011_09_26_drive_0101_sync/image_02/colmap/Line3D++/Line3D++__W_FULL__N_10__sigmaP_2.5__sigmaA_10__epiOverlap_0.25__kNN_10__OPTIMIZED__vis_3.txt");
+  constructSemanticLineMapfromColmap();
+  // pubLineMapfromTXT("/home/chrisliu/Datasets/kitti/2011_09_26_drive_0101_sync/2011_09_26/2011_09_26_drive_0101_sync/image_02/colmap/Line3D++/Line3D++__W_FULL__N_10__sigmaP_2.5__sigmaA_10__epiOverlap_0.25__kNN_10__OPTIMIZED__vis_3.txt");
 }
 
 void Map::readParameters(const std::string &sensor_config_file)
@@ -417,14 +449,17 @@ void Map::constructSemanticLineMapfromColmap()
   // // save as BIN
   // Line3D->save3DLinesAsBIN(outputFolder);
 
-  line_map_pub_.publish(getLineMap());
+  line_map_pub_.publish(getLineMap(Line3D, cams_images));
 
   // cleanup
   delete Line3D;
 }
 
-visualization_msgs::Marker Map::getLineMap()
+visualization_msgs::Marker Map::getLineMap(L3DPP::Line3D *Line3D, std::map<unsigned int, std::string> &cams_images)
 {
+
+  std::string inputFolder = "/home/chrisliu/Datasets/kitti/2011_09_26_drive_0101_sync/2011_09_26/2011_09_26_drive_0101_sync/image_02/data";
+
   visualization_msgs::Marker line_map;
   line_map.header.stamp = ros::Time::now();
   line_map.header.frame_id = "line_map";
@@ -449,6 +484,20 @@ visualization_msgs::Marker Map::getLineMap()
     if (current.collinear3Dsegments_.size() == 0)
       continue;
 
+    L3DPP::Segment2D segment2D = *current.underlyingCluster_.residuals()->begin();
+    int camID = segment2D.camID();
+    Eigen::Vector4f coords2D = Line3D->getSegmentCoords2D(segment2D);
+
+    cv::Mat mask = cv::imread(inputFolder + "/seg_encode_results/" + cams_images[camID], CV_LOAD_IMAGE_GRAYSCALE);
+
+    std_msgs::ColorRGBA color;
+    cv::Scalar label_color = labels[mask.at<uchar>(coords2D(1), coords2D(0))].color;
+    // cout << label_color << endl;
+    color.a = 1.0;
+    color.b = label_color(0)/255.0;
+    color.g = label_color(1)/255.0;
+    color.r = label_color(2)/255.0;
+
     // write 3D segments
     // file << current.collinear3Dsegments_.size() << " ";
     std::list<L3DPP::Segment3D>::const_iterator it2 = current.collinear3Dsegments_.begin();
@@ -468,6 +517,9 @@ visualization_msgs::Marker Map::getLineMap()
 
       line_map.points.push_back(P1);
       line_map.points.push_back(P2);
+
+      line_map.colors.push_back(color);
+      line_map.colors.push_back(color);
     }
   }
   return line_map;

@@ -2,7 +2,7 @@
  * @Author: Jianheng Liu
  * @Date: 2021-10-24 17:32:12
  * @LastEditors: Jianheng Liu
- * @LastEditTime: 2021-11-20 21:18:49
+ * @LastEditTime: 2021-12-06 16:04:19
  * @Description: Description
  */
 #pragma once
@@ -10,7 +10,7 @@
 #include <ros/ros.h>
 
 #include "sensor/sensor.h"
-#include "map/map.h"
+// #include "map/map.h"
 
 class SV_SLAM {
 public:
@@ -18,7 +18,7 @@ public:
 
 private:
   std::shared_ptr<Sensor> sensor;
-  std::shared_ptr<Map> map;
+  // std::shared_ptr<Map> map;
 
   ros::Subscriber lidar_sub_, gps_pos_sub_, gps_vel_sub_;
   std::vector<ros::Subscriber> img_sub_;

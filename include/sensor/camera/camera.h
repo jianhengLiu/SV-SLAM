@@ -2,7 +2,7 @@
  * @Author: Jianheng Liu
  * @Date: 2021-10-24 16:43:34
  * @LastEditors: Jianheng Liu
- * @LastEditTime: 2021-12-03 15:42:28
+ * @LastEditTime: 2021-12-07 00:09:59
  * @Description: Description
  */
 #pragma once
@@ -56,8 +56,6 @@ private:
 
   std::queue<sensor_msgs::ImageConstPtr> cam_buf_;
   std::queue<cv::Mat> seg_buf;
-
-
 
   void segmentorProcess();
 

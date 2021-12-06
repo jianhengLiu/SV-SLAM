@@ -2,7 +2,7 @@
  * @Author: Jianheng Liu
  * @Date: 2021-10-24 17:32:22
  * @LastEditors: Jianheng Liu
- * @LastEditTime: 2021-12-05 17:04:41
+ * @LastEditTime: 2021-12-06 15:31:12
  * @Description: Description
  */
 
@@ -18,9 +18,9 @@ SV_SLAM::SV_SLAM(ros::NodeHandle &nh)
 
   readParameters(sensor_config_file);
   sensor = std::make_shared<Sensor>(sensor_config_file);
-  map = std::make_shared<Map>(nh, sensor_config_file);
+  // map = std::make_shared<Map>(nh, sensor_config_file);
 
-  // RegisterSubscriber(nh);
+  RegisterSubscriber(nh);
   // RegisterPublisher(nh);
 }
 
