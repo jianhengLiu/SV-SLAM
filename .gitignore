@@ -1,8 +1,8 @@
-build
-devel
-.idea
-cmake-build-debug
-__pycache__
-.vscode
-checkpoints/*
-lib/*
+**/build
+**/devel
+**/.idea
+**/cmake-build-debug
+**/__pycache__
+**/.vscode
+
+!.gitignore
