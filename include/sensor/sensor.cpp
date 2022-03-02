@@ -2,7 +2,7 @@
  * @Author: Jianheng Liu
  * @Date: 2021-10-24 16:46:18
  * @LastEditors: Jianheng Liu
- * @LastEditTime: 2021-12-03 11:29:00
+ * @LastEditTime: 2021-12-12 14:24:42
  * @Description: Description
  */
 #include "sensor.h"
@@ -27,7 +27,8 @@ Sensor::Sensor(const std::string &sensor_config_file) {
     camera.emplace_back(i, sensor_config_file);
   }
 
-  // sensor_thread_ = std::thread(&Sensor::sensorProcess, this);
+  if(ENABLE_SENSOR_ALIGN)
+  sensor_align_thread_ = std::thread(&Sensor::sensorAlignProcess, this);
 }
 
 void Sensor::readParameters(const std::string &sensor_config_file) {
@@ -45,10 +46,13 @@ void Sensor::readParameters(const std::string &sensor_config_file) {
   cv::cv2eigen(cv_Tr_lidar2cam, eigen_Tr_lidar2cam);
   sensor_param_.Tr_lidar2cam = eigen_Tr_lidar2cam;
 
+  ENABLE_SENSOR_ALIGN = static_cast<int>(fn["enable_sensor_align"]);
+  ENABLE_STEREO = static_cast<int>(fn["enable_stereo"]);
+
   fsSettings.release();
 }
 
-void Sensor::sensorProcess() {
+void Sensor::sensorAlignProcess() {
   while (1) {
     sensor_msgs::PointCloud2ConstPtr lidar_msg = lidar->getpopLidarMsg();
     pcl::PointCloud<pcl::PointXYZ> cloud_in;
@@ -74,9 +78,6 @@ void Sensor::sensorProcess() {
     cv_bridge::CvImagePtr cv_ptr;
     cv_ptr = cv_bridge::toCvCopy(cam_msg, sensor_msgs::image_encodings::BGR8);
     cv::Mat color_img = cv_ptr->image;
-//    cv::Mat undistort_img;
-//    cv::undistort(color_img,undistort_img,camera[0].cam_param_.intrinsic_matrix,
-//                  camera[0].cam_param_.distortion_coeffs);
 
     color_img =camera[0].undistort(color_img);
 
@@ -139,11 +140,4 @@ void Sensor::alignLidar2Img(const pcl::PointCloud<pcl::PointXYZ> &_cloud_in,
 
   cv::imshow("_image_in", _image_in);
   cv::waitKey(1);
-}
-
-cv::Mat Sensor::transformLidar2CamFrame(
-    const pcl::PointCloud<pcl::PointXYZ> &cloud_lidar,
-    pcl::PointCloud<pcl::PointXYZ> &cloud_cam) {
-
-  //  return color_img;
 }

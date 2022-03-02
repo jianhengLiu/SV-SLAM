@@ -2,7 +2,7 @@
  * @Author: Jianheng Liu
  * @Date: 2021-10-24 16:43:39
  * @LastEditors: Jianheng Liu
- * @LastEditTime: 2021-12-06 21:09:51
+ * @LastEditTime: 2021-12-12 14:18:46
  * @Description: Description
  */
 
@@ -131,8 +131,6 @@ void Camera::segmentorProcess()
 cv::Mat Camera::undistort(cv::Mat &_img_in)
 {
   cv::Mat img_out;
-  //  cv::undistort(_img_in, img_out, cam_param_.intrinsic_matrix,
-  //                cam_param_.distortion_coeffs);
   cv::remap(_img_in, img_out, cam_param_.map1, cam_param_.map2, cv::INTER_LINEAR,
             cv::BORDER_CONSTANT, cv::Scalar());
   return img_out;
