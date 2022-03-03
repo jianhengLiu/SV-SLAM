@@ -2,11 +2,13 @@
  * @Author: Jianheng Liu
  * @Date: 2021-10-24 16:46:18
  * @LastEditors: Jianheng Liu
- * @LastEditTime: 2021-12-03 11:29:00
+ * @LastEditTime: 2021-12-17 09:59:52
  * @Description: Description
  */
 #include "sensor.h"
 
+#include <opencv2/calib3d.hpp>
+#include <opencv2/core/cvstd_wrapper.hpp>
 #include <opencv2/core/eigen.hpp>
 
 #include <cv_bridge/cv_bridge.h>
@@ -27,7 +29,8 @@ Sensor::Sensor(const std::string &sensor_config_file) {
     camera.emplace_back(i, sensor_config_file);
   }
 
-  // sensor_thread_ = std::thread(&Sensor::sensorProcess, this);
+  if (ENABLE_SENSOR_ALIGN)
+    sensor_align_thread_ = std::thread(&Sensor::sensorAlignProcess, this);
 }
 
 void Sensor::readParameters(const std::string &sensor_config_file) {
@@ -45,10 +48,13 @@ void Sensor::readParameters(const std::string &sensor_config_file) {
   cv::cv2eigen(cv_Tr_lidar2cam, eigen_Tr_lidar2cam);
   sensor_param_.Tr_lidar2cam = eigen_Tr_lidar2cam;
 
+  ENABLE_SENSOR_ALIGN = static_cast<int>(fn["enable_sensor_align"]);
+  ENABLE_STEREO = static_cast<int>(fn["enable_stereo"]);
+
   fsSettings.release();
 }
 
-void Sensor::sensorProcess() {
+void Sensor::sensorAlignProcess() {
   while (1) {
     sensor_msgs::PointCloud2ConstPtr lidar_msg = lidar->getpopLidarMsg();
     pcl::PointCloud<pcl::PointXYZ> cloud_in;
@@ -74,11 +80,8 @@ void Sensor::sensorProcess() {
     cv_bridge::CvImagePtr cv_ptr;
     cv_ptr = cv_bridge::toCvCopy(cam_msg, sensor_msgs::image_encodings::BGR8);
     cv::Mat color_img = cv_ptr->image;
-//    cv::Mat undistort_img;
-//    cv::undistort(color_img,undistort_img,camera[0].cam_param_.intrinsic_matrix,
-//                  camera[0].cam_param_.distortion_coeffs);
 
-    color_img =camera[0].undistort(color_img);
+    color_img = camera[0].undistort(color_img);
 
     alignLidar2Img(cloud_in, color_img);
 
@@ -141,9 +144,52 @@ void Sensor::alignLidar2Img(const pcl::PointCloud<pcl::PointXYZ> &_cloud_in,
   cv::waitKey(1);
 }
 
-cv::Mat Sensor::transformLidar2CamFrame(
-    const pcl::PointCloud<pcl::PointXYZ> &cloud_lidar,
-    pcl::PointCloud<pcl::PointXYZ> &cloud_cam) {
+void Sensor::matchingStereoSGBM(cv::Mat _input_left, cv::Mat _input_right) {
+  int min_disparity = 0;
+  int num_disparities = 128;
+  int SADWindowSize = 11;
+  cv::Ptr<cv::StereoSGBM> sgbm =
+      cv::StereoSGBM::create(min_disparity, num_disparities, SADWindowSize);
+  int P1 = 4 * imgL.channels() * SADWindowSize * SADWindowSize;
+  int P2 = 32 * imgR.channels() * SADWindowSize * SADWindowSize;
+  sgbm->setP1(P1);
+  sgbm->setP2(P2);
+  sgbm->setPreFilterCap(63);
+  sgbm->setUniquenessRatio(10);
+  sgbm->setSpeckleRange(32);
+  sgbm->setSpeckleWindowSize(100);
+  sgbm->setDisp12MaxDiff(1);
+  // sgbm->setMode(cv::StereoSGBM::MODE_HH);
+  cv::Mat disp32F;
+  sgbm->compute(_input_left, _input_right, disp32F);
+  disp32F.convertTo(disp32F, CV_32F, 1.0 / 16);
+  // float* inData = disp32F.ptr<float>(284);
+  // cout << float(inData[322]) << endl;
+  // insertDepth32f(disp32F);
+  cv::Mat disp8U = cv::Mat(disp32F.rows, disp32F.cols, CV_8UC1);
+  // normalize(disp8U, disp32F, 0, 255, NORM_MINMAX, CV_8UC1);
+  disp32F.convertTo(disp8U, CV_8UC1);
+  cv::imshow("disparity", disp8U);
+  cv::waitKey(1);
 
-  //  return color_img;
+  float fx = 718.856;
+  float baseline = 35;
+  cv::Mat depthMap = cv::Mat::zeros(disp32F.size(), CV_32FC1);
+  int height = disp32F.rows;
+  int width = disp32F.cols;
+  for (int k = 0; k < height; k++) {
+    const float *inData = disp32F.ptr<float>(k);
+    float *outData = depthMap.ptr<float>(k);
+    for (int i = 0; i < width; i++) {
+      if (!inData[i])
+        continue;
+      outData[i] = float(fx * baseline / inData[i]);
+    }
+  }
+  // FileStorage fswrite("test.xml", FileStorage::WRITE);//
+  // 新建文件，覆盖掉已有文件 fswrite << "src1" << depthMap; fswrite.release();
+  cv::Mat depthMap8U = cv::Mat(depthMap.rows, depthMap.cols, CV_8UC1);
+  normalize(depthMap, depthMap8U, 0, 255, cv::NORM_MINMAX, CV_8U);
+  cv::imshow("depth:8U", depthMap8U);
+  cv::waitKey(1);
 }

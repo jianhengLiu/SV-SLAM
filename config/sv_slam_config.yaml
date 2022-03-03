@@ -10,6 +10,8 @@ imu_topic: "/camera/imu"
 lidar_topic: "/rslidar_points"
 
 sensor_config:
+  enable_stereo: 1
+  enable_sensor_align: 0
   Tr_lidar2cam: !!opencv-matrix
     rows: 4
     cols: 4
@@ -19,7 +21,7 @@ sensor_config:
             0.999910804733218,-0.00457019359847877,0.0125497373773338,-0.180874466984036,
             0,0,0,1 ]
 
-cam_number: 1
+cam_number: 2
 
 cam_config_0:
   image_topic: "/kitti/camera_color_left/image_raw"
@@ -56,8 +58,42 @@ cam_config_0:
     dt: d
     data: [-3.0451652061637519e-01, 3.8894492749157322e-02, 1.0517466490567872e-03, -5.5095449411338973e-04, 1.7054732639063463e-01]
 
+cam_config_1:
+  image_topic: "/kitti/camera_color_right/image_raw"
+  enable_segmentor: 0
+
+  #camera calibration
+  image_width: 1242
+  image_height: 375
+
+  rotation_rect_matrix: !!opencv-matrix
+    rows: 4
+    cols: 4
+    dt: d
+    data: [9.998321e-01,-7.193136e-03,1.685599e-02,0,7.232804e-03,9.999712e-01,-2.293585e-03,0,-1.683901e-02,2.415116e-03,9.998553e-01,0,0,0,0,1]
+
+  projection_matrix: !!opencv-matrix
+    rows: 3
+    cols: 4
+    dt: d
+    data: [ 7.215377e+02,0.000000e+00,6.095593e+02,-3.395242e+02,0.000000e+00,7.215377e+02,1.728540e+02,2.199936e+00,0.000000e+00,0.000000e+00,1.000000e+00,2.729905e-03 ]
+
+  intrinsic_matrix: !!opencv-matrix
+    rows: 3
+    cols: 3
+    dt: d
+    data: [1857.4752797615988, 0., 1039.692658811044, 
+           0., 1869.2155909761746, 739.3362262994145, 
+           0., 0., 1.]
+
+  distortion_coefficients: !!opencv-matrix
+    rows: 5
+    cols: 1
+    dt: d
+    data: [-3.0451652061637519e-01, 3.8894492749157322e-02, 1.0517466490567872e-03, -5.5095449411338973e-04, 1.7054732639063463e-01]
+
 segmentor_config:
-  show_img: 1
+  show_img: 0
 
   torch_script_path: "/home/chrisliu/ROSws/SV-SLAM_ws/src/SV-SLAM/models/bisenetv1_city.pt"
 

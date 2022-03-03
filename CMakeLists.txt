@@ -26,7 +26,7 @@ find_package(PCL REQUIRED)
 
 
 # 指定libTorch位置
-set(Torch_DIR /home/chrisliu/ROSws/SV-SLAM_ws/src/SV-SLAM/lib/libtorch/share/cmake/Torch)
+set(Torch_DIR ./lib/libtorch/share/cmake/Torch)
 find_package(Torch REQUIRED)
 message(STATUS "Torch library status:")
 message(STATUS "    version: ${TORCH_VERSION}")
@@ -55,7 +55,7 @@ include_directories(
 link_directories(
         lib/Line3Dpp/build)
 
-add_library(segmentor_lib SHARED
+add_library(segmentor_lib
         include/sensor/camera/segmentor/segmentor.cpp)
 target_link_libraries(segmentor_lib ${catkin_LIBRARIES}
         ${OpenCV_LIBS} dw 
@@ -63,7 +63,7 @@ target_link_libraries(segmentor_lib ${catkin_LIBRARIES}
         )
 
 add_library(
-        sensor_lib SHARED
+        sensor_lib
         include/sensor/sensor.cpp include/sensor/gps/gps.cpp
         include/sensor/camera/camera.cpp include/sensor/lidar/lidar.cpp)
 target_link_libraries(sensor_lib ${catkin_LIBRARIES} ${OpenCV_LIBS}
@@ -71,7 +71,7 @@ target_link_libraries(sensor_lib ${catkin_LIBRARIES} ${OpenCV_LIBS}
 
 
 add_library(
-        map_lib SHARED
+        map_lib
         include/map/map.cpp)
 target_link_libraries(map_lib ${catkin_LIBRARIES} ${OpenCV_LIBS}
         ${PCL_LIBRARIES}
@@ -79,7 +79,7 @@ target_link_libraries(map_lib ${catkin_LIBRARIES} ${OpenCV_LIBS}
         )
 
 add_library(
-        sv_slam_lib SHARED
+        sv_slam_lib
         include/sv_slam.cpp)
 target_link_libraries(sv_slam_lib ${catkin_LIBRARIES} ${OpenCV_LIBS}
         ${PCL_LIBRARIES} sensor_lib 

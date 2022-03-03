@@ -4,6 +4,7 @@
 **/cmake-build-debug
 **/__pycache__
 **/.vscode
+**/.cache
 
 **.pt
 **.onnx

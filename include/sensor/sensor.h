@@ -2,7 +2,7 @@
  * @Author: Jianheng Liu
  * @Date: 2021-10-24 16:46:12
  * @LastEditors: Jianheng Liu
- * @LastEditTime: 2021-11-24 13:41:22
+ * @LastEditTime: 2021-12-17 09:44:11
  * @Description: Description
  */
 #pragma once
@@ -29,18 +29,19 @@ public:
   std::shared_ptr<Lidar> lidar;
 
 private:
-  std::thread sensor_thread_;
+  std::thread sensor_align_thread_, stereo_thread_;
 
   SensorParam sensor_param_;
   int CAM_NUM;
+  bool ENABLE_SENSOR_ALIGN, ENABLE_STEREO;
 
-  void sensorProcess();
+  void stereoProcess();
+  void sensorAlignProcess();
 
   void readParameters(const std::string &sensor_config_file);
 
   void alignLidar2Img(const pcl::PointCloud<pcl::PointXYZ> &_cloud_in,
                       cv::Mat _image_in);
-  cv::Mat
-  transformLidar2CamFrame(const pcl::PointCloud<pcl::PointXYZ> &cloud_lidar,
-                          pcl::PointCloud<pcl::PointXYZ> &cloud_cam);
+
+  void matchingStereoSGBM(cv::Mat _input_left, cv::Mat _input_right);
 };

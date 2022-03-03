@@ -10,6 +10,14 @@ Normally if your system is `Ubuntu 18.04`, you should upgrade your cmake.
 
 **ref**： https://zhuanlan.zhihu.com/p/93480024
 
+# Backward-cpp
+
+```
+sudo apt-get install libdw-dev
+sudo wget -p /usr/include https://github.com/bombela/backward-cpp/blob/master/backward.hpp
+```
+
+**ref**: https://zhuanlan.zhihu.com/p/397148839
 
 # CUDA &　CUDNN
 
@@ -21,13 +29,14 @@ Download: https://developer.nvidia.com/zh-cn/cudnn
 unzip
 
 ```
-sudo cp cuda/include/cudnn.h /usr/local/cuda/include
-sudo cp cuda/include/cudnn_version.h /usr/local/cuda/include
+sudo cp cuda/include/cudnn*.h /usr/local/cuda/include
 sudo cp cuda/lib64/libcudnn* /usr/local/cuda/lib64
-sudo chmod a+r /usr/local/cuda/include/cudnn.h 
-sudo chmod a+r /usr/local/cuda/include/cudnn_version.h 
+sudo chmod a+r /usr/local/cuda/include/cudnn*.h 
 sudo chmod a+r /usr/local/cuda/lib64/libcudnn*
 ```
+
+**check**
+`cat /usr/local/cuda/include/cudnn_version.h | grep CUDNN_MAJOR -A 2`
 
 ## LibTorch
 
