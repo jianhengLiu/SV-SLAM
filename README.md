@@ -1,5 +1,9 @@
 # SV-SLAM
 
+<p align = "center">
+<img src="docs/slrecon.jpg" width = "600" height = "300" border="5" />
+</p>
+
 # Requirements
 
 ## CMake
